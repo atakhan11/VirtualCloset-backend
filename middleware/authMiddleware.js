@@ -7,7 +7,6 @@ import UserModel from '../models/userModel.js';
 const protect = async (req, res, next) => {
     let token;
 
-    // Header-da "Authorization" və "Bearer" sözü ilə başlayan tokeni axtarırıq
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
         try {
             // Tokeni "Bearer " mətnindən ayırırıq
@@ -17,7 +16,14 @@ const protect = async (req, res, next) => {
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
             // İstifadəçini ID-yə görə tapıb, şifrə məlumatı xaric olmaqla req obyektinə əlavə edirik
-            req.user = await UserModel.findById(decoded.id).select('-password');
+            req.user = await UserModel.findById(decoded.user.id).select('-password');
+
+            // ----> DÜZƏLİŞ BURADADIR <----
+            if (!req.user) {
+                // Əgər token etibarlıdırsa, amma həmin user bazada yoxdursa...
+                return res.status(401).json({ message: 'İcazə yoxdur, bu tokenə aid istifadəçi tapılmadı' });
+            }
+            // ----> DÜZƏLİŞİN SONU <----
 
             next(); // Hər şey qaydasındadırsa, növbəti mərhələyə (controller-ə) keç
         } catch (error) {
@@ -31,5 +37,15 @@ const protect = async (req, res, next) => {
     }
 };
 
-// Adlı export istifadə edirik
-export { protect };
+
+const isAdmin = (req, res, next) => {
+    // "protect" middleware-i artıq istifadəçini tapıb req.user-ə yerləşdirib.
+    // İndi həmin istifadəçinin rolunu yoxlayırıq.
+    if (req.user && req.user.role === 'admin') {
+        next(); // Əgər admindirsə, növbəti mərhələyə keç
+    } else {
+        res.status(403).json({ message: 'İcazə yoxdur. Yalnız adminlər.' }); // 403 Forbidden statusu
+    }
+};
+
+export { protect, isAdmin };

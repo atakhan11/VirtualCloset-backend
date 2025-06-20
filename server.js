@@ -1,13 +1,14 @@
-
+import path from 'path';
 import express from 'express';
 import session from 'express-session';
 import passport from 'passport';
 import './configs/passport.js';
-import closesRouter from './router/closesRouter.js';
 import userRoutes from './router/userRoutes.js';
 import { connectDB } from './configs/config.js';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import adminRoutes from './router/adminRoutes.js';
+import clothesRoutes from './router/clothesRoutes.js';
 
 
 
@@ -28,8 +29,13 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
-app.use ('/api/closes', closesRouter)
+
 app.use ('/api/users', userRoutes)
+app.use('/api/admin', adminRoutes);
+app.use('/api/clothes', clothesRoutes);
+
+const __dirname = path.resolve(); // Bu sətir ESM-də __dirname-i düzgün işləməsi üçün lazımdır
+app.use(express.static(path.join(__dirname, 'public')));
 
 connectDB()
 app.listen(5000, () => {

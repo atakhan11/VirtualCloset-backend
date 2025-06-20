@@ -15,7 +15,16 @@ const userSchema = mongoose.Schema({
         return !this.googleId;
     }
 },
-    googleId: { type: String }
+    googleId: { type: String },
+    role: {
+        type: String,
+        required: true,
+        enum: ['user', 'admin'],
+        default: 'user' // Bütün yeni istifadəçilər avtomatik "user" olacaq
+    },
+
+    resetPasswordToken: String,
+    resetPasswordExpire: Date,
 }, {timestamps:true})
 
 userSchema.pre('save', async function (next) {
