@@ -9,7 +9,8 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import adminRoutes from './router/adminRoutes.js';
 import clothesRoutes from './router/clothesRoutes.js';
-
+import outfitRoutes from './router/outfitRoutes.js';
+import wishlistRoutes from './router/wishlistRoutes.js';
 
 
 const app = express()
@@ -33,6 +34,8 @@ app.use(passport.session());
 app.use ('/api/users', userRoutes)
 app.use('/api/admin', adminRoutes);
 app.use('/api/clothes', clothesRoutes);
+app.use('/api/outfits', outfitRoutes);
+app.use('/api/wishlist', wishlistRoutes);
 
 const __dirname = path.resolve(); // Bu sətir ESM-də __dirname-i düzgün işləməsi üçün lazımdır
 app.use(express.static(path.join(__dirname, 'public')));

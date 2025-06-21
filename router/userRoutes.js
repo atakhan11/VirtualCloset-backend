@@ -1,11 +1,5 @@
-// routes/userRoutes.js
-
 import express from 'express';
 import passport from 'passport';
-import { forgotPassword, resetPassword } from '../controllers/userController.js';
-
-// DÜZƏLİŞ BURADADIR: "generateToken" indi mötərizəsiz import edilir.
-import generateToken from '../utils/generateToken.js';
 
 // Controller funksiyalarını import edirik
 import { 
@@ -13,51 +7,61 @@ import {
     loginUser, 
     logoutUser, 
     getUserProfile,
+    updateUserProfile,
     getAllUsers,
     deleteUser,
-    updateUser 
+    updateUser,
+    forgotPassword, 
+    resetPassword
 } from '../controllers/userController.js';
 
-// Middleware-i import edirik
+// Middleware-ləri import edirik
 import { protect } from '../middleware/authMiddleware.js';
-import admin from '../middleware/adminMiddleware.js';
+// === DÜZƏLİŞ 1: Düzgün admin middleware-i import edildi ===
+import admin from '../middleware/adminMiddleware.js'; 
+
+// Token yaratma funksiyasını import edirik
+import generateToken from '../utils/generateToken.js';
 
 const router = express.Router();
 
-// --- Public Routes ---
+// --- Ümumi və Profil Route-ları ---
 router.post('/signup', registerUser);
 router.post('/login', loginUser);
 router.post('/logout', logoutUser);
 
-// --- Private Route ---
-router.get('/profile', protect, getUserProfile);
+router.route('/profile')
+    .get(protect, getUserProfile)
+    .put(protect, updateUserProfile);
+
+// --- Şifrə Sıfırlama Route-ları ---
+router.post('/forgotpassword', forgotPassword);
+router.put('/resetpassword/:token', resetPassword);
+
+// --- Admin Route-ları ---
+// Bütün istifadəçiləri yalnız admin gətirə bilər
 router.route('/')
-    .get(protect, admin, getAllUsers); // Bütün istifadəçiləri gətir
+    .get(protect, admin, getAllUsers);
 
+// Spesifik bir istifadəçini yalnız admin silə və ya redaktə edə bilər
 router.route('/:id')
-    .delete(protect, admin, deleteUser) // İstifadəçini sil
-    .put(protect, admin, updateUser);   // İstifadəçini redaktə et
+    .delete(protect, admin, deleteUser)
+    .put(protect, admin, updateUser);
 
-
-// --- Google Authentication Routes ---
+// --- Google ilə Autentifikasiya Route-ları ---
 router.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 
 router.get(
     '/auth/google/callback',
     passport.authenticate('google', { 
-        failureRedirect: 'http://localhost:5173/login',
+        failureRedirect: 'http://localhost:5173/login', // Frontend-in login səhifəsinə yönləndir
         session: false 
     }),
     (req, res) => {
-        // Uğurlu girişdən sonra Passport istifadəçini req.user-ə yerləşdirir.
-        // İndi generateToken düzgün işləyəcək.
-        const token = generateToken(req.user);
-
-        // İstifadəçini token ilə birlikdə frontend-ə yönləndiririk
+        const token = generateToken(req.user._id); // Yalnız user ID ilə token yaradırıq
+        // Uğurlu girişdən sonra istifadəçini token ilə birlikdə xüsusi bir səhifəyə yönləndiririk
         res.redirect(`http://localhost:5173/auth-success?token=${token}`);
     }
 );
-router.post('/forgotpassword', forgotPassword);
-router.put('/resetpassword/:token', resetPassword);
 
 export default router;

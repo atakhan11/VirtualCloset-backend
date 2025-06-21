@@ -53,7 +53,7 @@ router.route('/')
 
 // /api/clothes/:id
 router.route('/:id')
-    .put(protect, updateCloth)
+    .put(protect, upload.single('image'), updateCloth)
     .delete(protect, deleteCloth); // Bir geyimi silir
     
 

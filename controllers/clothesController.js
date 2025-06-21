@@ -1,20 +1,14 @@
 // controllers/clothesController.js
 
 import ClothesModel from '../models/clothesModel.js';
-import fs from 'fs'; // Fayl sistemində işləmək üçün Node.js modulu
-import path from 'path'; // Fayl yollarını idarə etmək üçün
+import users from '../models/userModel.js'; // <-- ƏSAS PROBLEM BU SƏTRİN OLMAMASIDIR
+import fs from 'fs';
+import path from 'path';
 
 // @desc    Yeni bir geyim əlavə et
 // @route   POST /api/clothes
 // @access  Private
 const addCloth = async (req, res) => {
-     console.log('addCloth funksiyasına gələn req.user:', req.user);
-
-    if (!req.user) {
-        return res.status(500).json({ 
-            message: 'Server xətası: `req.user` obyekti tapılmadı! `protect` middleware-i istifadəçini təyin etmədi.' 
-        });
-    }
     const { name, category, colors, season, brand, notes } = req.body;
 
     if (!req.file) {
@@ -26,20 +20,20 @@ const addCloth = async (req, res) => {
 
     try {
         const newCloth = new ClothesModel({
-            user: req.user.id, // "protect" middleware-indən gəlir
+            user: req.user._id, // req.user.id və ya req.user._id, hər ikisi işləməlidir
             name,
             category,
-            colors: colors ? colors.split(',') : [], // "qırmızı,sarı" string-ini array-ə çevirir
+            colors: colors ? colors.split(',') : [],
             season,
             brand,
             notes,
-            image: `/uploads/${req.file.filename}` // Yüklənmiş faylın serverdəki yolu
+            image: `/uploads/${req.file.filename}` // public/ olmadan
         });
 
         const createdCloth = await newCloth.save();
         res.status(201).json(createdCloth);
     } catch (error) {
-        console.error(error);
+        console.error("ADD CLOTH ERROR:", error);
         res.status(500).json({ message: 'Server xətası' });
     }
 };
@@ -49,10 +43,10 @@ const addCloth = async (req, res) => {
 // @access  Private
 const getMyClothes = async (req, res) => {
     try {
-        // Yalnız həmin istifadəçiyə aid olan geyimləri tapırıq
         const clothes = await ClothesModel.find({ user: req.user._id }).sort({ createdAt: -1 });
         res.json(clothes);
     } catch (error) {
+        console.error("GET MY CLOTHES ERROR:", error);
         res.status(500).json({ message: 'Server xətası' });
     }
 };
@@ -63,59 +57,68 @@ const getMyClothes = async (req, res) => {
 const deleteCloth = async (req, res) => {
     try {
         const cloth = await ClothesModel.findById(req.params.id);
-
         if (cloth) {
-            // Təhlükəsizlik yoxlaması
             if (cloth.user.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
                 return res.status(401).json({ message: 'Bu əməliyyatı etməyə icazəniz yoxdur' });
             }
-
-            // DÜZƏLİŞ 1: Şəklin yolunu əvvəlcədən bir dəyişənə götürürük
-            const imagePathToDelete = cloth.image; 
-
-            // Geyimi bazadan silirik
-            // .remove() köhnəlib, deleteOne daha müasir və təhlükəsizdir
+            const imagePathToDelete = cloth.image;
             await ClothesModel.deleteOne({ _id: req.params.id });
-
-            // DÜZƏLİŞ 2: YALNIZ şəklin yolu mövcuddursa, onu silməyə cəhd edirik
             if (imagePathToDelete) {
-                // Fayl yolunu qururuq (əvvəlki məsləhətimizə əsasən,
-                // addCloth-da yolu "public/uploads/fayl.png" kimi saxladığınızı fərz edirik)
-                const fullPath = path.join(path.resolve(), imagePathToDelete); 
-                
+                const fullPath = path.join(path.resolve(), 'public', imagePathToDelete);
                 if (fs.existsSync(fullPath)) {
                     fs.unlinkSync(fullPath);
                 }
             }
-            
             res.json({ message: 'Geyim uğurla silindi' });
         } else {
             res.status(404).json({ message: 'Geyim tapılmadı' });
         }
     } catch (error) {
-        // HƏMİŞƏ xətanı terminalda loglayın ki, səbəbi biləsiniz!
-        console.error("DELETE CLOTH ERROR:", error); 
+        console.error("DELETE CLOTH ERROR:", error);
         res.status(500).json({ message: 'Server xətası' });
     }
 };
 
+// @desc    Bir geyimi ID-yə görə redaktə et
+// @route   PUT /api/clothes/:id
+// @access  Private
 const updateCloth = async (req, res) => {
     try {
         const cloth = await ClothesModel.findById(req.params.id);
 
         if (cloth) {
-            // İCAZƏ YOXLAMASI: Yalnız sahibi və ya admin redaktə edə bilər
+            // İcazə yoxlaması
             if (cloth.user.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
                 return res.status(401).json({ message: 'Bu əməliyyatı etməyə icazəniz yoxdur' });
             }
 
-            // Məlumatları yeniləyirik
+            // Silinmə ehtimalı üçün köhnə şəklin yolunu yadda saxlayırıq
+            const oldImagePath = cloth.image;
+
+            // Mətn sahələrini yeniləyirik
             cloth.name = req.body.name || cloth.name;
             cloth.category = req.body.category || cloth.category;
             cloth.season = req.body.season || cloth.season;
-            // ... digər sahələri də bu şəkildə əlavə edə bilərsiniz ...
+            cloth.brand = req.body.brand || cloth.brand;
+            cloth.notes = req.body.notes || cloth.notes;
+            cloth.colors = req.body.colors ? req.body.colors.split(',') : cloth.colors;
+
+            // Əgər sorğu ilə yeni bir şəkil faylı gəlibsə, onu da yeniləyirik
+            if (req.file) {
+                cloth.image = `/uploads/${req.file.filename}`;
+            }
 
             const updatedCloth = await cloth.save();
+
+            // Əgər yeni şəkil yüklənibsə və köhnə şəkil yolu mövcuddursa, köhnə faylı serverdən silirik
+            if (req.file && oldImagePath) {
+                // public qovluğunu da nəzərə alaraq tam yolu yaradırıq
+                const fullOldPath = path.join(path.resolve(), 'public', oldImagePath);
+                 if (fs.existsSync(fullOldPath)) {
+                    fs.unlinkSync(fullOldPath);
+                }
+            }
+
             res.json(updatedCloth);
 
         } else {
@@ -123,33 +126,33 @@ const updateCloth = async (req, res) => {
         }
     } catch (error) {
         console.error("UPDATE CLOTH ERROR:", error);
+        if (error.name === 'ValidatorError') {
+            return res.status(400).json({ message: error.message });
+        }
         res.status(500).json({ message: 'Server xətası' });
     }
 };
 
-// Funksiyanı export etməyi unutmayın
-// export { ..., updateCloth };
-
-// controllers/clothesController.js
-
+// @desc    Bütün geyimləri gətir (Admin üçün)
+// @route   GET /api/clothes/all
+// @access  Private/Admin
 const getAllClothes_Admin = async (req, res) => {
     try {
-        console.log('Admin bütün geyimləri çəkir...');
-        
-        // MÜVƏQQƏTİ DƏYİŞİKLİK: .populate() hissəsini kommentə alırıq (və ya silirik)
-        const clothes = await ClothesModel.find({}).sort({ createdAt: -1 });
-        
-        if (!clothes) {
-            return res.status(404).json({ message: 'Heç bir geyim tapılmadı' });
-        }
-        
-        console.log(`${clothes.length} ədəd geyim tapıldı.`);
+        const clothes = await ClothesModel.find({})
+            .populate('user', 'id name email')
+            .sort({ createdAt: -1 });
         res.json(clothes);
-
     } catch (error) {
         console.error("GET ALL CLOTHES (ADMIN) ERROR:", error);
         res.status(500).json({ message: 'Server xətası' });
     }
 };
 
-export { addCloth, getMyClothes, deleteCloth, getAllClothes_Admin, updateCloth };
+// Bütün funksiyaları export edirik
+export { 
+    addCloth, 
+    getMyClothes, 
+    deleteCloth, 
+    updateCloth,
+    getAllClothes_Admin 
+};

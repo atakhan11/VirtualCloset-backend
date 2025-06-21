@@ -7,7 +7,7 @@ const clothesSchema = new mongoose.Schema(
         user: {
             type: mongoose.Schema.Types.ObjectId,
             required: true,
-            ref: 'User'
+            ref: 'user'
         },
         name: {
             type: String,
@@ -26,7 +26,7 @@ const clothesSchema = new mongoose.Schema(
                 'Köynək (T-shirt)',
                 'Köynək (Klassik)',
                 'Polo',
-                'Svitşot / Hudi',
+                'Sweatshirt / Hudi',
                 'Sviter / Cemper',
                 'Gödəkçə / Palto',
                 'Pencək / Blazer',
