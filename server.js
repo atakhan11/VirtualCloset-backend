@@ -11,6 +11,7 @@ import adminRoutes from './router/adminRoutes.js';
 import clothesRoutes from './router/clothesRoutes.js';
 import outfitRoutes from './router/outfitRoutes.js';
 import wishlistRoutes from './router/wishlistRoutes.js';
+import aiRoutes from './router/aiRoutes.js';
 
 
 const app = express()
@@ -36,6 +37,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/clothes', clothesRoutes);
 app.use('/api/outfits', outfitRoutes);
 app.use('/api/wishlist', wishlistRoutes);
+app.use('/api/ai', aiRoutes);
 
 const __dirname = path.resolve(); // Bu sətir ESM-də __dirname-i düzgün işləməsi üçün lazımdır
 app.use(express.static(path.join(__dirname, 'public')));

@@ -12,7 +12,8 @@ import {
     deleteUser,
     updateUser,
     forgotPassword, 
-    resetPassword
+    resetPassword,
+    getChatUsers
 } from '../controllers/userController.js';
 
 // Middleware-ləri import edirik
@@ -63,5 +64,6 @@ router.get(
         res.redirect(`http://localhost:5173/auth-success?token=${token}`);
     }
 );
+router.route('/chatlist').get(protect, getChatUsers);
 
 export default router;

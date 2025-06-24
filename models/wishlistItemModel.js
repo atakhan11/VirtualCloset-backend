@@ -10,7 +10,7 @@ const wishlistItemSchema = new mongoose.Schema(
         user: {
             type: mongoose.Schema.Types.ObjectId,
             required: true,
-            ref: 'User', // Bu məhsulun hansı istifadəçiyə aid olduğunu göstərir
+            ref: 'user', // Bu məhsulun hansı istifadəçiyə aid olduğunu göstərir
         },
         image: {
             type: String,

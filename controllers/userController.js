@@ -154,6 +154,18 @@ const updateUser = async (req, res) => {
     // ... Sizin mövcud kodunuz ...
 };
 
+const getChatUsers = async (req, res) => {
+    try {
+        // Hazırkı istifadəçi xaric, bütün istifadəçiləri tapırıq
+        // Təhlükəsizlik üçün yalnız lazımi sahələri (id, name, email) qaytarırıq
+        const users = await UserModel.find({ _id: { $ne: req.user._id } }).select('_id name email');
+        res.json(users);
+    } catch (error) {
+        console.error('GET CHAT USERS ERROR:', error);
+        res.status(500).json({ message: 'Server xətası' });
+    }
+};
+
 
 // Bütün funksiyaları ES Module formatında export edirik
 export {
@@ -166,5 +178,6 @@ export {
     resetPassword,
     getAllUsers,
     deleteUser,
-    updateUser
+    updateUser,
+    getChatUsers
 };

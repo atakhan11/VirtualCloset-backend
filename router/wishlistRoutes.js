@@ -3,7 +3,8 @@ import {
     addWishlistItem, 
     getMyWishlist, 
     deleteWishlistItem,
-    moveItemToWardrobe
+    moveItemToWardrobe,
+    updateWishlistItem
 } from '../controllers/wishlistController.js';
 import { protect } from '../middleware/authMiddleware.js';
 import upload from '../middleware/uploadMiddleware.js'; // Şəkil yükləmək üçün multer
@@ -16,7 +17,8 @@ router.route('/')
     .post(protect, upload.single('image'), addWishlistItem); // Yeni məhsul əlavə edərkən şəkil yükləmə imkanı
 
 router.route('/:id')
-    .delete(protect, deleteWishlistItem);
+    .delete(protect, deleteWishlistItem)
+    .put(protect, upload.single('image'), updateWishlistItem);
 
 // Bonus funksiya üçün xüsusi route
 router.route('/:id/move').post(protect, moveItemToWardrobe);
