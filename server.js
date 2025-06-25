@@ -29,7 +29,7 @@ app.use(
     })
 );
 app.use(passport.initialize());
-app.use(passport.session());
+app.use(passport.session())
 
 
 app.use ('/api/users', userRoutes)
