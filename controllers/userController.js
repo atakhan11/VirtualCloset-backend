@@ -162,7 +162,7 @@ const getChatUsers = async (req, res) => {
         res.json(users);
     } catch (error) {
         console.error('GET CHAT USERS ERROR:', error);
-        res.status(500).json({ message: 'Server xətası' });
+        res.status(500).json({ message: 'Server xətası' }); 
     }
 };
 
