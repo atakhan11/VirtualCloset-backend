@@ -9,10 +9,12 @@ import path from 'path';
 // @route   POST /api/clothes
 // @access  Private
 const addCloth = async (req, res) => {
-    const { name, category, colors, season, brand, notes } = req.body;
+    // Dəyişiklik: 'image' sahəsini req.body-dən birbaşa URL olaraq alırıq
+    const { name, category, colors, season, brand, notes, image } = req.body;
 
-    if (!req.file) {
-        return res.status(400).json({ message: 'Zəhmət olmasa, bir şəkil yükləyin' });
+    // Dəyişiklik: Artıq req.file yox, req.body.image-in mövcudluğunu yoxlayırıq
+    if (!image) {
+        return res.status(400).json({ message: 'Şəkil URL-i tapılmadı. Zəhmət olmasa, şəkil yükləyin.' });
     }
     if (!name || !category) {
         return res.status(400).json({ message: 'Ad və Kateqoriya sahələri məcburidir' });
@@ -20,14 +22,15 @@ const addCloth = async (req, res) => {
 
     try {
         const newCloth = new ClothesModel({
-            user: req.user._id, // req.user.id və ya req.user._id, hər ikisi işləməlidir
+            user: req.user._id,
             name,
             category,
-            colors: colors ? colors.split(',') : [],
+            colors: colors ? colors.split(',') : [], // Rəngləri string-dən array-ə çevirir
             season,
             brand,
             notes,
-            image: `/uploads/${req.file.filename}` // public/ olmadan
+            // Dəyişiklik: Şəkil sahəsinə birbaşa Cloudinary-dən gələn URL yazılır
+            image: image 
         });
 
         const createdCloth = await newCloth.save();
@@ -84,52 +87,38 @@ const deleteCloth = async (req, res) => {
 // @access  Private
 const updateCloth = async (req, res) => {
     try {
+        const { name, category, colors, season, brand, notes, image } = req.body;
+        
         const cloth = await ClothesModel.findById(req.params.id);
 
         if (cloth) {
-            // İcazə yoxlaması
+            // İcazə yoxlaması: Yalnız paltarın sahibi və ya admin redaktə edə bilər.
             if (cloth.user.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-                return res.status(401).json({ message: 'Bu əməliyyatı etməyə icazəniz yoxdur' });
+                res.status(401);
+                throw new Error('Bu əməliyyatı etməyə səlahiyyətiniz yoxdur');
             }
 
-            // Silinmə ehtimalı üçün köhnə şəklin yolunu yadda saxlayırıq
-            const oldImagePath = cloth.image;
-
-            // Mətn sahələrini yeniləyirik
-            cloth.name = req.body.name || cloth.name;
-            cloth.category = req.body.category || cloth.category;
-            cloth.season = req.body.season || cloth.season;
-            cloth.brand = req.body.brand || cloth.brand;
-            cloth.notes = req.body.notes || cloth.notes;
-            cloth.colors = req.body.colors ? req.body.colors.split(',') : cloth.colors;
-
-            // Əgər sorğu ilə yeni bir şəkil faylı gəlibsə, onu da yeniləyirik
-            if (req.file) {
-                cloth.image = `/uploads/${req.file.filename}`;
-            }
+            cloth.name = name || cloth.name;
+            cloth.category = category || cloth.category;
+            cloth.season = season || cloth.season;
+            cloth.brand = brand || cloth.brand;
+            cloth.notes = notes || cloth.notes;
+            cloth.colors = colors ? colors.split(',') : cloth.colors;
+            
+            // Dəyişiklik: Əgər frontend-dən yeni şəkil URL-i gəlibsə, onu yeniləyirik.
+            // Əks halda köhnə URL qalır.
+            cloth.image = image || cloth.image;
 
             const updatedCloth = await cloth.save();
-
-            // Əgər yeni şəkil yüklənibsə və köhnə şəkil yolu mövcuddursa, köhnə faylı serverdən silirik
-            if (req.file && oldImagePath) {
-                // public qovluğunu da nəzərə alaraq tam yolu yaradırıq
-                const fullOldPath = path.join(path.resolve(), 'public', oldImagePath);
-                 if (fs.existsSync(fullOldPath)) {
-                    fs.unlinkSync(fullOldPath);
-                }
-            }
-
             res.json(updatedCloth);
-
         } else {
-            res.status(404).json({ message: 'Geyim tapılmadı' });
+            res.status(404);
+            throw new Error('Geyim tapılmadı');
         }
     } catch (error) {
         console.error("UPDATE CLOTH ERROR:", error);
-        if (error.name === 'ValidatorError') {
-            return res.status(400).json({ message: error.message });
-        }
-        res.status(500).json({ message: 'Server xətası' });
+        // Xəta mesajını daha detallı göndəririk
+        res.status(500).json({ message: error.message || 'Server xətası baş verdi' });
     }
 };
 

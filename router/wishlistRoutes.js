@@ -14,11 +14,11 @@ const router = express.Router();
 // Bütün arzu siyahısı route-ları qorunmalıdır
 router.route('/')
     .get(protect, getMyWishlist)
-    .post(protect, upload.single('image'), addWishlistItem); // Yeni məhsul əlavə edərkən şəkil yükləmə imkanı
+     .post(protect, addWishlistItem); // upload.single('image') silindi
 
 router.route('/:id')
     .delete(protect, deleteWishlistItem)
-    .put(protect, upload.single('image'), updateWishlistItem);
+    .put(protect, updateWishlistItem) // upload.single('image') silindi
 
 // Bonus funksiya üçün xüsusi route
 router.route('/:id/move').post(protect, moveItemToWardrobe);

@@ -1,14 +1,16 @@
 import WishlistItem from '../models/wishlistItemModel.js';
 import ClothesModel from '../models/clothesModel.js';
-import fs from 'fs'; // <-- YENİ: Fayl Sistemi modulu
-import path from 'path';
 
 // @desc    Yeni bir arzu məhsulu əlavə et
 // @route   POST /api/wishlist
 // @access  Private
 const addWishlistItem = async (req, res) => {
     try {
-        const { name, category, price, storeUrl, notes } = req.body;
+        const { name, category, price, storeUrl, notes, image } = req.body;
+
+        if (!name || !image) {
+            return res.status(400).json({ message: 'Ad və Şəkil sahələri məcburidir' });
+        }
 
         const wishlistItem = new WishlistItem({
             name,
@@ -16,7 +18,7 @@ const addWishlistItem = async (req, res) => {
             price,
             storeUrl,
             notes,
-            image: req.file ? `/uploads/${req.file.filename}` : null, // Şəkil varsa, yolunu saxlayırıq
+            image: image,
             user: req.user._id,
         });
 
@@ -28,38 +30,35 @@ const addWishlistItem = async (req, res) => {
     }
 };
 
-// @desc    Daxil olmuş istifadəçinin arzu siyahısını gətir
-// @route   GET /api/wishlist
+// @desc    Arzu siyahısındakı bir məhsulu yenilə
+// @route   PUT /api/wishlist/:id
 // @access  Private
-const getMyWishlist = async (req, res) => {
-    try {
-        const wishlist = await WishlistItem.find({ user: req.user._id }).sort({ createdAt: -1 });
-        res.json(wishlist);
-    } catch (error) {
-        console.error('GET MY WISHLIST ERROR:', error);
-        res.status(500).json({ message: 'Server xətası' });
-    }
-};
-
-// @desc    Arzu siyahısından bir məhsulu sil
-// @route   DELETE /api/wishlist/:id
-// @access  Private
-const deleteWishlistItem = async (req, res) => {
+const updateWishlistItem = async (req, res) => {
     try {
         const item = await WishlistItem.findById(req.params.id);
 
         if (item) {
-            // Yalnız məhsulun sahibi onu silə bilər
             if (item.user.toString() !== req.user._id.toString()) {
                 return res.status(401).json({ message: 'Bu əməliyyatı etməyə icazəniz yoxdur' });
             }
-            await WishlistItem.deleteOne({ _id: req.params.id });
-            res.json({ message: 'Məhsul arzu siyahısından silindi' });
+
+            const { name, category, price, storeUrl, notes, image } = req.body;
+
+            item.name = name || item.name;
+            item.category = category || item.category;
+            item.price = price || item.price;
+            item.storeUrl = storeUrl || item.storeUrl;
+            item.notes = notes || item.notes;
+            item.image = image || item.image;
+
+            const updatedItem = await item.save();
+            res.json(updatedItem);
+
         } else {
             res.status(404).json({ message: 'Məhsul tapılmadı' });
         }
     } catch (error) {
-        console.error('DELETE WISHLIST ITEM ERROR:', error);
+        console.error('UPDATE WISHLIST ITEM ERROR:', error);
         res.status(500).json({ message: 'Server xətası' });
     }
 };
@@ -76,19 +75,21 @@ const moveItemToWardrobe = async (req, res) => {
                 return res.status(401).json({ message: 'Bu əməliyyatı etməyə icazəniz yoxdur' });
             }
 
-            // Wishlist-dəki məlumatlardan yeni bir geyim obyekti yaradırıq
+            // DƏYİŞİKLİK: Yeni qarderob məhsulu yaradarkən əskik ola biləcək
+            // sahələr üçün standart dəyərlər təyin edirik.
             const newCloth = new ClothesModel({
                 name: item.name,
                 category: item.category,
                 image: item.image,
-                brand: req.body.brand || '', // İstifadəçi bu məlumatları frontend-dən göndərə bilər
-                season: req.body.season || 'Mövsümsüz',
+                brand: item.brand || '', // Wishlist-də brand yoxdursa, boş string olsun
+                season: item.season || 'Mövsümsüz', // Wishlist-də mövsüm yoxdursa, standart dəyər olsun
+                colors: item.colors || [], // Wishlist-də rəng yoxdursa, boş massiv olsun
                 notes: `Arzu siyahısından əlavə edilib. Mağaza: ${item.storeUrl || 'Qeyd edilməyib'}`,
                 user: req.user._id,
             });
 
             await newCloth.save();
-            await WishlistItem.deleteOne({ _id: req.params.id }); // Məhsulu wishlist-dən silirik
+            await WishlistItem.deleteOne({ _id: req.params.id });
 
             res.status(201).json({ message: 'Məhsul uğurla qarderoba əlavə edildi!' });
 
@@ -96,56 +97,50 @@ const moveItemToWardrobe = async (req, res) => {
             res.status(404).json({ message: 'Arzu siyahısında belə məhsul tapılmadı' });
         }
     } catch (error) {
+        // DƏYİŞİKLİK: Daha detallı xəta mesajı göndəririk
         console.error('MOVE TO WARDROBE ERROR:', error);
-        res.status(500).json({ message: 'Server xətası' });
+        if (error.name === 'ValidationError') {
+            const messages = Object.values(error.errors).map(val => val.message);
+            return res.status(400).json({ message: `Məlumat yoxlama xətası: ${messages.join(', ')}` });
+        }
+        res.status(500).json({ message: 'Server xətası: Məhsulu qarderoba köçürmək mümkün olmadı.' });
     }
 };
 
 
-const updateWishlistItem = async (req, res) => {
+// --- DİGƏR FUNKSİYALAR OLDUĞU KİMİ QALIR ---
+const getMyWishlist = async (req, res) => {
+    try {
+        const wishlist = await WishlistItem.find({ user: req.user._id }).sort({ createdAt: -1 });
+        res.json(wishlist);
+    } catch (error) {
+        console.error('GET MY WISHLIST ERROR:', error);
+        res.status(500).json({ message: 'Server xətası' });
+    }
+};
+
+const deleteWishlistItem = async (req, res) => {
     try {
         const item = await WishlistItem.findById(req.params.id);
-
         if (item) {
-            // İcazə yoxlaması
             if (item.user.toString() !== req.user._id.toString()) {
                 return res.status(401).json({ message: 'Bu əməliyyatı etməyə icazəniz yoxdur' });
             }
-
-            // === DƏYİŞİKLİK: Köhnə şəklin yolunu yadda saxlayırıq ===
-            const oldImagePath = item.image;
-
-            // Məlumatları yeniləyirik
-            item.name = req.body.name || item.name;
-            item.category = req.body.category || item.category;
-            item.price = req.body.price || item.price;
-            item.storeUrl = req.body.storeUrl || item.storeUrl;
-            item.notes = req.body.notes || item.notes;
-
-            // Əgər sorğu ilə yeni bir şəkil faylı gəlibsə, onu da yeniləyirik
-            if (req.file) {
-                item.image = `/uploads/${req.file.filename}`;
-            }
-
-            const updatedItem = await item.save();
-
-            // === DƏYİŞİKLİK: Yeni şəkil yüklənibsə, köhnəsini serverdən silirik ===
-            if (req.file && oldImagePath) {
-                // `public` qovluğunu da nəzərə alaraq tam yolu yaradırıq
-                const fullOldPath = path.join(path.resolve(), 'public', oldImagePath);
-                 if (fs.existsSync(fullOldPath)) {
-                    fs.unlinkSync(fullOldPath);
-                }
-            }
-
-            res.json(updatedItem);
-
+            await WishlistItem.deleteOne({ _id: req.params.id });
+            res.json({ message: 'Məhsul arzu siyahısından silindi' });
         } else {
             res.status(404).json({ message: 'Məhsul tapılmadı' });
         }
     } catch (error) {
-        console.error('UPDATE WISHLIST ITEM ERROR:', error);
+        console.error('DELETE WISHLIST ITEM ERROR:', error);
         res.status(500).json({ message: 'Server xətası' });
     }
 };
-export { addWishlistItem, getMyWishlist, deleteWishlistItem, moveItemToWardrobe, updateWishlistItem };
+
+export { 
+    addWishlistItem, 
+    getMyWishlist, 
+    deleteWishlistItem, 
+    moveItemToWardrobe, 
+    updateWishlistItem 
+};
