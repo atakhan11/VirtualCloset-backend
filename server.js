@@ -17,6 +17,7 @@ import aiRoutes from './router/aiRoutes.js';
 import contactRoutes from './router/contactRoutes.js'; // ===> ƏLAVƏ EDİLDİ (2): Yeni route-u import edirik
 import uploadRoutes from './router/uploadRoutes.js';
 
+
 const app = express();
 
 app.use(express.urlencoded({ extended: true }));
@@ -44,6 +45,7 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/contact', contactRoutes); // ===> ƏLAVƏ EDİLDİ (3): Yeni route-u istifadəyə veririk
 app.use('/api/upload', uploadRoutes);
 app.use('/api/scrape', scrapeRoutes);
+
 
 const __dirname = path.resolve();
 app.use(express.static(path.join(__dirname, 'public')));

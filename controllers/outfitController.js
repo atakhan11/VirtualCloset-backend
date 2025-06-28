@@ -111,4 +111,29 @@ const updateOutfitPlan = async (req, res) => {
     }
 };
 
-export { createOutfit, getMyOutfits, deleteOutfit, getOutfitById, updateOutfitPlan };
+  const unplanOutfit = async (req, res) => {
+        try {
+            const outfit = await Outfit.findById(req.params.id);
+    
+            if (outfit) {
+                // İcazə yoxlaması
+                if (outfit.user.toString() !== req.user._id.toString()) {
+                    return res.status(401).json({ message: 'Bu əməliyyatı etməyə icazəniz yoxdur' });
+                }
+    
+                // Planı ləğv edirik
+                outfit.isPlanned = false;
+                outfit.plannedDate = undefined; // Tarixi təmizləyirik
+    
+                const updatedOutfit = await outfit.save();
+                res.json(updatedOutfit);
+            } else {
+                res.status(404).json({ message: 'Kombin tapılmadı' });
+            }
+        } catch (error) {
+            console.error('UNPLAN OUTFIT ERROR:', error);
+            res.status(500).json({ message: 'Server xətası' });
+        }
+    };
+
+export { createOutfit, getMyOutfits, deleteOutfit, getOutfitById, updateOutfitPlan, unplanOutfit };

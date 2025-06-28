@@ -14,7 +14,7 @@ const wishlistItemSchema = new mongoose.Schema(
         },
         image: {
             type: String,
-            required: false, // Şəkil məcburi deyil
+            required: true, // Şəkil məcburi deyil
         },
         category: {
             type: String,
