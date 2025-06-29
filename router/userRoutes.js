@@ -13,7 +13,8 @@ import {
     updateUser,
     forgotPassword, 
     resetPassword,
-    getChatUsers
+    getChatUsers,
+    deleteUserProfile
 } from '../controllers/userController.js';
 
 // Middleware-ləri import edirik
@@ -31,10 +32,12 @@ router.post('/signup', registerUser);
 router.post('/login', loginUser);
 router.post('/logout', logoutUser);
 
+
+
 router.route('/profile')
     .get(protect, getUserProfile)
-    .put(protect, updateUserProfile);
-
+    .put(protect, updateUserProfile)
+    .delete(protect, deleteUserProfile);
 // --- Şifrə Sıfırlama Route-ları ---
 router.post('/forgotpassword', forgotPassword);
 router.put('/resetpassword/:token', resetPassword);

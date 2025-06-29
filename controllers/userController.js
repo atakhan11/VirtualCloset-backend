@@ -108,6 +108,10 @@ const updateUserProfile = async (req, res) => {
             user.name = req.body.name || user.name;
             user.email = req.body.email || user.email;
 
+            if (req.body.avatar) {
+            user.avatar = req.body.avatar;
+        }
+
             if (req.body.password) {
                 // Yeni şifrəni databazaya yazmazdan əvvəl Mongoose-un pre('save') metodu
                 // onu avtomatik hash-ləməlidir (userModel.js-də təyin olunubsa).
@@ -121,6 +125,7 @@ const updateUserProfile = async (req, res) => {
                 name: updatedUser.name,
                 email: updatedUser.email,
                 role: updatedUser.role,
+                avatar: updatedUser.avatar,
                 token: generateToken(updatedUser._id), // Yeni məlumatlarla yeni token
             });
         } else {
@@ -167,6 +172,28 @@ const getChatUsers = async (req, res) => {
 };
 
 
+const deleteUserProfile = async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id);
+
+        if (user) {
+            // Bu hissə istəyə bağlıdır: İstifadəçi silinəndə onun bütün məlumatları da silinsinmi?
+            // await Clothes.deleteMany({ user: req.user._id });
+            // await Outfit.deleteMany({ user: req.user._id });
+            // await WishlistItem.deleteMany({ user: req.user._id });
+
+            await user.deleteOne();
+            res.json({ message: 'Hesab uğurla silindi' });
+        } else {
+            res.status(404);
+            throw new Error('İstifadəçi tapılmadı');
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Server xətası' });
+    }
+};
+
+
 // Bütün funksiyaları ES Module formatında export edirik
 export {
     registerUser,
@@ -179,5 +206,6 @@ export {
     getAllUsers,
     deleteUser,
     updateUser,
-    getChatUsers
+    getChatUsers,
+    deleteUserProfile
 };

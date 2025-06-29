@@ -14,7 +14,11 @@ const userSchema = mongoose.Schema({
         // Əks halda (googleId varsa), şifrə məcburi deyil.
         return !this.googleId;
     }
-},
+},avatar: {
+        type: String,
+        required: false, // Məcburi deyil
+        default: '', // Standart olaraq boş olsun
+    },
     googleId: { type: String },
     role: {
         type: String,
