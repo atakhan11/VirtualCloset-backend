@@ -2,34 +2,46 @@ import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
 
-const userSchema = mongoose.Schema({
-    name:{type:String, required:true},
-    email:{type:String, required:true},
-    password: {
-    type: String,
-    // "required" bir funksiya olaraq yazılır
-    required: function() {
-        // Bu funksiya deyir: Əgər bu istifadəçinin "googleId"-si YOXDURSA,
-        // deməli, bu normal qeydiyyatdır və şifrə MƏCBURİDİR.
-        // Əks halda (googleId varsa), şifrə məcburi deyil.
-        return !this.googleId;
+const userSchema = mongoose.Schema(
+    {
+        name: {
+            type: String,
+            required: true
+        },
+        email: {
+            type: String,
+            required: true,
+            unique: true // E-poçtların təkrar olunmasının qarşısını alır
+        },
+        password: {
+            type: String,
+            required: function() {
+                // Yalnız googleId yoxdursa, şifrə məcburidir
+                return !this.googleId;
+            },
+            select: false // Təhlükəsizlik üçün şifrəni sorğularda gizlədir
+        },
+        avatar: {
+            type: String,
+            required: false, // Məcburi deyil
+            default: '',     // Standart dəyər boş string
+        },
+        googleId: {
+            type: String
+        },
+        role: {
+            type: String,
+            required: true,
+            enum: ['user', 'admin'],
+            default: 'user'
+        },
+        resetPasswordToken: String,
+        resetPasswordExpire: Date,
+    },
+    {
+        timestamps: true // `createdAt` və `updatedAt` sahələrini avtomatik əlavə edir
     }
-},avatar: {
-        type: String,
-        required: false, // Məcburi deyil
-        default: '', // Standart olaraq boş olsun
-    },
-    googleId: { type: String },
-    role: {
-        type: String,
-        required: true,
-        enum: ['user', 'admin'],
-        default: 'user' // Bütün yeni istifadəçilər avtomatik "user" olacaq
-    },
-
-    resetPasswordToken: String,
-    resetPasswordExpire: Date,
-}, {timestamps:true})
+);
 
 userSchema.pre('save', async function (next) {
     // YALNIZ şifrə sahəsi mövcuddursa və ya dəyişdirilibsə, hash etmə işini gör.

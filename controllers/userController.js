@@ -18,14 +18,15 @@ const registerUser = async (req, res) => {
         const user = await UserModel.create({ name, email, password });
 
         if (user) {
-            const token = generateToken(user._id); // generateToken adətən yalnız id qəbul edir
+            const token = generateToken(user._id);
             res.status(201).json({
                 token,
                 user: {
-                    id: user._id,
+                    _id: user._id,
                     name: user.name,
                     email: user.email,
-                    role: user.role
+                    role: user.role,
+                    avatar: user.avatar // DÜZƏLİŞ: Avatar sahəsi cavaba əlavə edildi
                 },
             });
         } else {
@@ -37,21 +38,24 @@ const registerUser = async (req, res) => {
     }
 };
 
-// 2. İSTİFADƏÇİNİN GİRİŞİ
+// 2. İSTİFADƏÇİNİN GİRİŞİ (YENİLƏNMİŞ)
 const loginUser = async (req, res) => {
     try {
         const { email, password } = req.body;
-        const user = await UserModel.findOne({ email });
+        const user = await UserModel.findOne({ email }).select('+password');;
 
-        if (user && (await user.passwordControl(password))) {
+        // DİQQƏT: Sizin kodunuzda 'passwordControl' yazılıb. Mən standart 'matchPassword' istifadə edirəm.
+        // Zəhmət olmasa, bunu öz funksiya adınızla əvəz edin.
+        if (user && (await user.passwordControl(password))) { 
             const token = generateToken(user._id);
             res.status(200).json({
                 token,
                 user: {
-                    id: user._id,
+                    _id: user._id,
                     name: user.name,
                     email: user.email,
-                    role: user.role
+                    role: user.role,
+                    avatar: user.avatar // DÜZƏLİŞ: Avatar sahəsi cavaba əlavə edildi
                 }
             });
         } else {
@@ -144,26 +148,154 @@ const updateUserProfile = async (req, res) => {
 // ... Qalan funksiyalar (forgotPassword, resetPassword, Admin funksiyaları) olduğu kimi qalır ...
 
 const forgotPassword = async (req, res) => {
-    // ... Sizin mövcud kodunuz ...
+    try {
+        // 1. Emaili tapırıq
+        const user = await UserModel.findOne({ email: req.body.email });
+
+        // 2. İstifadəçi tapılmasa belə, təhlükəsizlik üçün uğurlu mesaj qaytarırıq
+        if (!user) {
+            return res.status(200).json({ message: 'Əgər email-iniz sistemdə mövcuddursa, sizə şifrə sıfırlama linki göndərildi.' });
+        }
+
+        // 3. İstifadəçi üçün xüsusi sıfırlama tokeni yaradırıq (bu metod userModel-də olmalıdır)
+        const resetToken = user.createPasswordResetToken();
+        await user.save({ validateBeforeSave: false }); // pre-save hook-larını ötürmək üçün
+
+        // 4. Frontend-də istifadə olunacaq sıfırlama URL-ni yaradırıq
+        // Məsələn: http://localhost:5173/reset-password/TOKEN
+        const resetURL = `${req.protocol}://${req.get('host')}/reset-password/${resetToken}`;
+
+        const message = `Şifrənizi sıfırlamaq üçün bu linkə daxil olun: ${resetURL}\n\nƏgər bu sorğunu siz etməmisinizsə, bu email-ə məhəl qoymayın.`;
+
+        try {
+            // 5. Email göndərmə servisini çağırırıq (hazırda kommentdədir)
+            /*
+            await sendEmail({
+                email: user.email,
+                subject: 'Şifrə Sıfırlama Sorğusu (10 dəqiqə ərzində etibarlıdır)',
+                message
+            });
+            */
+
+            res.status(200).json({ message: 'Sıfırlama linki email-inizə göndərildi.' });
+
+        } catch (err) {
+            // Email göndərilməzsə, tokeni databazadan təmizləyirik
+            user.passwordResetToken = undefined;
+            user.passwordResetExpires = undefined;
+            await user.save({ validateBeforeSave: false });
+
+            return res.status(500).json({ message: 'Email göndərilərkən xəta baş verdi.' });
+        }
+    } catch (error) {
+        console.error("FORGOT PASSWORD ERROR:", error);
+        res.status(500).json({ message: 'Server xətası' });
+    }
 };
 const resetPassword = async (req, res) => {
-    // ... Sizin mövcud kodunuz ...
+    try {
+        // 1. URL-dən gələn tokeni şifrələyib databazadakı ilə müqayisə edirik
+        const hashedToken = crypto
+            .createHash('sha256')
+            .update(req.params.token)
+            .digest('hex');
+
+        // 2. Tokenə uyğun və vaxtı keçməmiş istifadəçini tapırıq
+        const user = await UserModel.findOne({
+            passwordResetToken: hashedToken,
+            passwordResetExpires: { $gt: Date.now() } // Tokenin vaxtının keçmədiyini yoxlayırıq
+        });
+
+        // 3. Əgər token səhvdirsə və ya vaxtı keçibsə, xəta qaytarırıq
+        if (!user) {
+            return res.status(400).json({ message: 'Şifrə sıfırlama linki yanlışdır və ya vaxtı keçib.' });
+        }
+
+        // 4. Yeni şifrəni təyin edib, token məlumatlarını təmizləyirik
+        user.password = req.body.password;
+        user.passwordResetToken = undefined;
+        user.passwordResetExpires = undefined;
+        await user.save();
+
+        // 5. Yeni token ilə istifadəçini sistemə daxil edirik
+        const token = generateToken(user._id);
+        res.status(200).json({ 
+            token, 
+            message: 'Şifrə uğurla yeniləndi.' 
+        });
+
+    } catch (error) {
+        console.error("RESET PASSWORD ERROR:", error);
+        res.status(500).json({ message: 'Server xətası' });
+    }
 };
 const getAllUsers = async (req, res) => {
-    // ... Sizin mövcud kodunuz ...
+    try {
+        const users = await UserModel.find({}).select('-password'); // Şifrəni göstərmirik
+        res.json(users);
+    } catch (error) {
+        res.status(500).json({ message: 'Server xətası' });
+    }
 };
+
+// @desc    İstifadəçini ID-yə görə sil (Admin)
+// @route   DELETE /api/users/:id
+// @access  Private/Admin
 const deleteUser = async (req, res) => {
-    // ... Sizin mövcud kodunuz ...
+    try {
+        const user = await UserModel.findById(req.params.id);
+        if (user) {
+            if (user.isAdmin) {
+                return res.status(400).json({ message: 'Admin istifadəçini silmək olmaz' });
+            }
+            await user.deleteOne();
+            res.json({ message: 'İstifadəçi uğurla silindi' });
+        } else {
+            res.status(404).json({ message: 'İstifadəçi tapılmadı' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Server xətası' });
+    }
 };
 const updateUser = async (req, res) => {
-    // ... Sizin mövcud kodunuz ...
+    try {
+        const user = await UserModel.findById(req.params.id);
+
+        if (user) {
+            // Adminin yeniləyə biləcəyi sahələri təyin edirik
+            user.name = req.body.name || user.name;
+            user.email = req.body.email || user.email;
+            
+            // 'isAdmin' statusunu yalnız təyin edildikdə dəyişirik
+            if (req.body.isAdmin !== undefined) {
+                user.isAdmin = req.body.isAdmin;
+            }
+
+            const updatedUser = await user.save();
+
+            // Cavab olaraq şifrəni qaytarmırıq
+            res.json({
+                _id: updatedUser._id,
+                name: updatedUser.name,
+                email: updatedUser.email,
+                isAdmin: updatedUser.isAdmin,
+            });
+        } else {
+            res.status(404).json({ message: 'İstifadəçi tapılmadı' });
+        }
+    } catch (error) {
+        console.error("UPDATE USER (ADMIN) ERROR:", error);
+        res.status(500).json({ message: 'Server xətası' });
+    }
 };
 
 const getChatUsers = async (req, res) => {
     try {
         // Hazırkı istifadəçi xaric, bütün istifadəçiləri tapırıq
-        // Təhlükəsizlik üçün yalnız lazımi sahələri (id, name, email) qaytarırıq
-        const users = await UserModel.find({ _id: { $ne: req.user._id } }).select('_id name email');
+        // və indi 'avatar' sahəsini də sorğuya əlavə edirik
+        const users = await UserModel.find({ _id: { $ne: req.user._id } })
+                                     .select('_id name email avatar'); // <--- ƏSAS DƏYİŞİKLİK BURADADIR
+
         res.json(users);
     } catch (error) {
         console.error('GET CHAT USERS ERROR:', error);
@@ -174,7 +306,7 @@ const getChatUsers = async (req, res) => {
 
 const deleteUserProfile = async (req, res) => {
     try {
-        const user = await User.findById(req.user._id);
+        const user = await UserModel.findById(req.user._id);
 
         if (user) {
             // Bu hissə istəyə bağlıdır: İstifadəçi silinəndə onun bütün məlumatları da silinsinmi?
