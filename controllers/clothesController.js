@@ -1,5 +1,6 @@
 // controllers/clothesController.js
 
+import Activity from '../models/activityModel.js';
 import ClothesModel from '../models/clothesModel.js';
 import users from '../models/userModel.js'; // <-- ƏSAS PROBLEM BU SƏTRİN OLMAMASIDIR
 import fs from 'fs';
@@ -34,6 +35,11 @@ const addCloth = async (req, res) => {
         });
 
         const createdCloth = await newCloth.save();
+        await Activity.create({
+    user: req.user._id,
+    actionType: 'CLOTH_ADDED',
+    message: ` adlı istifadəçi yeni bir geyim əlavə etdi: "${createdCloth.name}"`,
+  });
         res.status(201).json(createdCloth);
     } catch (error) {
         console.error("ADD CLOTH ERROR:", error);
@@ -127,7 +133,19 @@ const updateCloth = async (req, res) => {
 // @access  Private/Admin
 const getAllClothes_Admin = async (req, res) => {
     try {
-        const clothes = await ClothesModel.find({})
+         const { search } = req.query;
+
+        // YENİ: Axtarış üçün filter obyekti yaradırıq
+        const filter = search
+            ? {
+                // $or ilə həm adda, həm də kateqoriyada axtarırıq
+                $or: [
+                    { name: { $regex: search, $options: 'i' } }, // 'i' - case-insensitive
+                    { category: { $regex: search, $options: 'i' } }
+                ]
+            }
+            : {};
+        const clothes = await ClothesModel.find(filter)
             .populate('user', 'id name email')
             .sort({ createdAt: -1 });
         res.json(clothes);

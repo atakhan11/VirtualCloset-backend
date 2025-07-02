@@ -1,6 +1,6 @@
 // routes/adminRoutes.js
 import express from 'express';
-import { getAllUsers, deleteUser, getDashboardStats } from '../controllers/adminController.js';
+import { getAllUsers, deleteUser, getDashboardStats, getRecentActivities } from '../controllers/adminController.js';
 import { protect, isAdmin } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -10,5 +10,6 @@ const router = express.Router();
 router.get('/stats', protect, isAdmin, getDashboardStats);
 router.get('/users', protect, isAdmin, getAllUsers);
 router.delete('/users/:id', protect, isAdmin, deleteUser);
+router.get('/activities', protect, isAdmin, getRecentActivities);
 
 export default router;

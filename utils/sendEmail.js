@@ -14,7 +14,7 @@ const sendEmail = async (options) => {
         from: `StyleFolio <${process.env.EMAIL_USER}>`,
         to: options.email,
         subject: options.subject,
-        html: options.html
+        html: options.message // Dəyişiklik burada
     };
 
     await transporter.sendMail(mailOptions);

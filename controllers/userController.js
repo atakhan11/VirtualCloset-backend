@@ -3,7 +3,8 @@ import ClothesModel from "../models/clothesModel.js";
 import generateToken from '../utils/generateToken.js';
 import crypto from 'crypto';
 import sendEmail from '../utils/sendEmail.js';
-
+import bcrypt from 'bcryptjs';
+import Activity from "../models/activityModel.js";
 
 // 1. YENİ İSTİFADƏÇİNİN QEYDİYYATI
 const registerUser = async (req, res) => {
@@ -15,10 +16,18 @@ const registerUser = async (req, res) => {
             return res.status(400).json({ message: 'Bu email artıq istifadə olunur' });
         }
 
-        const user = await UserModel.create({ name, email, password });
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        const user = await UserModel.create({ name, email, password, password: hashedPassword });
 
         if (user) {
             const token = generateToken(user._id);
+            await Activity.create({
+      user: user._id,
+      actionType: 'USER_REGISTERED',
+      message: 'sistemdə yeni istifadəçi kimi qeydiyyatdan keçdi.',
+    });
             res.status(201).json({
                 token,
                 user: {
@@ -147,82 +156,73 @@ const updateUserProfile = async (req, res) => {
 
 // ... Qalan funksiyalar (forgotPassword, resetPassword, Admin funksiyaları) olduğu kimi qalır ...
 
+// YENİ VƏ ETİBARLI FORGOTPASSWORD FUNKSİYASI
+// userController.js-də bu versiyanı istifadə edin
 const forgotPassword = async (req, res) => {
     try {
-        // 1. Emaili tapırıq
         const user = await UserModel.findOne({ email: req.body.email });
-
-        // 2. İstifadəçi tapılmasa belə, təhlükəsizlik üçün uğurlu mesaj qaytarırıq
         if (!user) {
-            return res.status(200).json({ message: 'Əgər email-iniz sistemdə mövcuddursa, sizə şifrə sıfırlama linki göndərildi.' });
+            return res.status(200).json({ message: 'Sorğu göndərildi.' });
         }
 
-        // 3. İstifadəçi üçün xüsusi sıfırlama tokeni yaradırıq (bu metod userModel-də olmalıdır)
-        const resetToken = user.createPasswordResetToken();
-        await user.save({ validateBeforeSave: false }); // pre-save hook-larını ötürmək üçün
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+        
+        // Dəyərləri birbaşa user obyektinə mənimsədirik
+        user.resetPasswordToken = hashedToken;
+        user.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
 
-        // 4. Frontend-də istifadə olunacaq sıfırlama URL-ni yaradırıq
-        // Məsələn: http://localhost:5173/reset-password/TOKEN
-        const resetURL = `${req.protocol}://${req.get('host')}/reset-password/${resetToken}`;
+        // Dəyişdirilmiş user obyektini yadda saxlayırıq
+        const updatedUser = await user.save();
+        
+      
 
-        const message = `Şifrənizi sıfırlamaq üçün bu linkə daxil olun: ${resetURL}\n\nƏgər bu sorğunu siz etməmisinizsə, bu email-ə məhəl qoymayın.`;
-
-        try {
-            // 5. Email göndərmə servisini çağırırıq (hazırda kommentdədir)
-            /*
-            await sendEmail({
-                email: user.email,
-                subject: 'Şifrə Sıfırlama Sorğusu (10 dəqiqə ərzində etibarlıdır)',
-                message
-            });
-            */
-
-            res.status(200).json({ message: 'Sıfırlama linki email-inizə göndərildi.' });
-
-        } catch (err) {
-            // Email göndərilməzsə, tokeni databazadan təmizləyirik
-            user.passwordResetToken = undefined;
-            user.passwordResetExpires = undefined;
-            await user.save({ validateBeforeSave: false });
-
-            return res.status(500).json({ message: 'Email göndərilərkən xəta baş verdi.' });
+        if (!updatedUser.resetPasswordToken) {
+            console.log("KRİTİK XƏTA: Save əməliyyatı tokeni bazaya YAZMADI!");
+            throw new Error("Tokeni bazaya yazmaq mümkün olmadı.");
         }
+
+        const resetURL = `http://localhost:5173/reset-password/${resetToken}`;
+        const message = `<p>Şifrəni sıfırlamaq üçün bu linkə klikləyin: <a href="${resetURL}">Sıfırla</a></p>`;
+
+        await sendEmail({
+            email: user.email,
+            subject: 'Şifrə Sıfırlama Sorğusu',
+            message: message
+        });
+
+        res.status(200).json({ message: 'Sıfırlama linki email-inizə göndərildi.' });
+
     } catch (error) {
         console.error("FORGOT PASSWORD ERROR:", error);
         res.status(500).json({ message: 'Server xətası' });
     }
 };
+// userController.js-də bu funksiyanı aşağıdakı ilə əvəz edin
 const resetPassword = async (req, res) => {
     try {
-        // 1. URL-dən gələn tokeni şifrələyib databazadakı ilə müqayisə edirik
-        const hashedToken = crypto
-            .createHash('sha256')
-            .update(req.params.token)
-            .digest('hex');
-
-        // 2. Tokenə uyğun və vaxtı keçməmiş istifadəçini tapırıq
+        const hashedToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
         const user = await UserModel.findOne({
-            passwordResetToken: hashedToken,
-            passwordResetExpires: { $gt: Date.now() } // Tokenin vaxtının keçmədiyini yoxlayırıq
+            resetPasswordToken: hashedToken,
+            resetPasswordExpires: { $gt: Date.now() }
         });
 
-        // 3. Əgər token səhvdirsə və ya vaxtı keçibsə, xəta qaytarırıq
         if (!user) {
             return res.status(400).json({ message: 'Şifrə sıfırlama linki yanlışdır və ya vaxtı keçib.' });
         }
 
-        // 4. Yeni şifrəni təyin edib, token məlumatlarını təmizləyirik
-        user.password = req.body.password;
-        user.passwordResetToken = undefined;
-        user.passwordResetExpires = undefined;
+        // YENİ ŞİFRƏNİ BİRBAŞA BURADA HASH-LƏYİRİK
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(req.body.password, salt);
+        
+        // Artıq lazım olmayan token məlumatlarını təmizləyirik
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpires = undefined;
+        
         await user.save();
 
-        // 5. Yeni token ilə istifadəçini sistemə daxil edirik
         const token = generateToken(user._id);
-        res.status(200).json({ 
-            token, 
-            message: 'Şifrə uğurla yeniləndi.' 
-        });
+        res.status(200).json({ token, message: 'Şifrə uğurla yeniləndi.' });
 
     } catch (error) {
         console.error("RESET PASSWORD ERROR:", error);
@@ -231,6 +231,7 @@ const resetPassword = async (req, res) => {
 };
 const getAllUsers = async (req, res) => {
     try {
+        
         const users = await UserModel.find({}).select('-password'); // Şifrəni göstərmirik
         res.json(users);
     } catch (error) {
@@ -243,6 +244,7 @@ const getAllUsers = async (req, res) => {
 // @access  Private/Admin
 const deleteUser = async (req, res) => {
     try {
+        
         const user = await UserModel.findById(req.params.id);
         if (user) {
             if (user.isAdmin) {
