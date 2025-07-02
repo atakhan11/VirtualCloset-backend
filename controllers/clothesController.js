@@ -19,7 +19,7 @@ const addCloth = async (req, res) => {
     }
     if (!name || !category) {
         return res.status(400).json({ message: 'Ad və Kateqoriya sahələri məcburidir' });
-    }
+    }r
 
     try {
         const newCloth = new ClothesModel({
