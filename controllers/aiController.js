@@ -4,51 +4,52 @@ const getStyleAdvice = async (req, res) => {
     const { question, clothes } = req.body;
 
     if (!question) {
-        return res.status(400).json({ message: 'Sual daxil edilməyib.' });
+        return res.status(400).json({ message: 'Question not provided.' }); // Moved to English
     }
 
     try {
         const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY);
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash"});
 
-        // Geyim siyahısının mövcud olub-olmadığını yoxlayırıq
+        // Checking if wardrobe list exists
         const hasWardrobe = Array.isArray(clothes) && clothes.length > 0;
 
         const wardrobeContext = hasWardrobe 
-            ? clothes.map(c => `- Adı: "${c.name}", Kateqoriyası: "${c.category}", Mövsümü: "${c.season || 'qeyd edilməyib'}"`).join('\n')
-            : "Boşdur"; // Əgər geyim yoxdursa, bunu AI-yə bildiririk
+            ? clothes.map(c => `- Name: "${c.name}", Category: "${c.category}", Season: "${c.season || 'not specified'}"`).join('\n') // Moved to English
+            : "Empty"; // Moved to English
         
-        // === YENİLƏNMİŞ, İKİ-SSENARİLİ TƏLİMAT (PROMPT) ===
+        // === UPDATED, TWO-SCENARIO INSTRUCTION (PROMPT) ===
         const prompt = `
-            Sən "StyleFolio" adlı virtual qarderob tətbiqinin peşəkar və kreativ stil məsləhətçisisən.
+            You are a professional and creative style advisor for a virtual wardrobe application called "StyleFolio".
+            All your responses MUST be in English.
 
-            QAYDALAR:
-            1.  Əvvəlcə aşağıdakı "QARDEROB SİYAHISI"-nı analiz et.
-            2.  Sonra istifadəçinin sualını ("${question}") analiz et.
-            3.  Bu iki məlumata əsasən aşağıdakı ssenarilərdən BİRİNİ seç və ona uyğun cavab ver:
+            RULES:
+            1. First, analyze the "WARDROBE LIST" below.
+            2. Then, analyze the user's question ("${question}").
+            3. Based on these two pieces of information, choose ONE of the following scenarios and respond accordingly:
 
             -----------------------------------------------------
-            **SSENARİ A: Əgər qarderob siyahısı "Boşdur" DEYİLSƏ və istifadəçinin sualına cavab vermək üçün YETƏRLİ VƏ UYĞUN geyimlər varsa:**
+            **SCENARIO A: If the wardrobe list is NOT "Empty" AND there are SUFFICIENT AND SUITABLE clothes to answer the user's question:**
 
-            - Cavabını YALNIZ və YALNIZ "QARDEROB SİYAHISI"-ndakı geyimlərə əsaslandır.
-            - QƏTİYYƏN siyahıda olmayan bir geyim adı uydurma.
-            - Təklif etdiyin hər bir geyimin adını siyahıdakı kimi DƏQİQ qeyd et.
-            - Məsələn: "İş görüşməsi üçün qarderobunuzdakı 'Ağ Klassik Köynək' ilə 'Qara Klassik Şalvar'-ı geyinə bilərsiniz."
+            - Base your answer SOLELY and EXCLUSIVELY on the clothes in the "WARDROBE LIST".
+            - ABSOLUTELY DO NOT invent a clothing item that is not in the list.
+            - Precisely state the name of each clothing item you suggest, exactly as it appears in the list.
+            - For example: "For a job interview, you can wear the 'White Classic Shirt' with the 'Black Classic Trousers' from your wardrobe."
             -----------------------------------------------------
-            **SSENARİ B: Əgər qarderob siyahısı "Boşdur"DURSA və ya suala uyğun geyim YOXDURSA:**
+            **SCENARIO B: If the wardrobe list IS "Empty" OR there are NO suitable clothes for the question:**
 
-            - Qarderob siyahısını tamamilə nəzərə alma.
-            - İstifadəçinin sualına ("${question}") əsaslanaraq, ümumi, dəbə uyğun və kənardan stil məsləhətləri ver.
-            - Təklif etdiyin geyimlərin ümumi adlarını çək (məsələn, "klassik bir bej trençkot", "tünd göy cins şalvar", "ağ idman ayaqqabısı").
-            - Cavabının sonunda istifadəçini öz geyimlərini qarderoba əlavə etməyə təşviq edən mehriban bir cümlə yaz. Məsələn: "Daha fərdi məsləhətlər üçün öz geyimlərinizi qarderobunuza əlavə etməyi unutmayın!"
+            - Completely disregard the wardrobe list.
+            - Based on the user's question ("${question}"), provide general, fashionable, and external style advice.
+            - Refer to general names for the clothing items you suggest (e.g., "a classic beige trench coat", "dark blue jeans", "white sports shoes").
+            - End your response with a friendly sentence encouraging the user to add their clothes to the wardrobe. For example: "For more personalized advice, don't forget to add your own clothes to your wardrobe!"
             -----------------------------------------------------
 
-            QARDEROB SİYAHISI:
+            WARDROBE LIST:
             ${wardrobeContext}
 
-            İSTİFADƏÇİNİN SUALI: "${question}"
+            USER'S QUESTION: "${question}"
 
-            SƏNİN MƏSLƏHƏTİN:
+            YOUR ADVICE:
         `;
 
         const result = await model.generateContent(prompt);
@@ -59,7 +60,7 @@ const getStyleAdvice = async (req, res) => {
 
     } catch (error) {
         console.error('AI STYLE ADVICE ERROR:', error);
-        res.status(500).json({ message: 'Ağıllı məsləhətçi ilə əlaqə qurmaq mümkün olmadı.' });
+        res.status(500).json({ message: 'Could not connect to the smart advisor.' }); // Moved to English
     }
 };
 

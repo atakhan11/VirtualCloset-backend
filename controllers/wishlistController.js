@@ -66,14 +66,14 @@ const moveItemToWardrobe = async (req, res) => {
         }
 
         const validCategories = ClothesModel.schema.path('category').enumValues;
-        const categoryToSet = validCategories.includes(item.category) ? item.category : 'Başqa';
+        const categoryToSet = validCategories.includes(item.category) ? item.category : 'Other';
 
         const newClothData = {
             user: req.user._id,
             name: item.name,
             image: item.image,
             category: categoryToSet,
-            season: 'Mövsümsüz',
+            season: 'All-season',
             brand: '',
             colors: [],
             notes: `Arzu siyahısından əlavə edilib. Mağaza: ${item.storeUrl || 'Qeyd edilməyib'}`,

@@ -23,20 +23,20 @@ const clothesSchema = new mongoose.Schema(
             type: String,
             required: true,
             enum: [
-                'Köynək (T-shirt)',
-                'Köynək (Klassik)',
-                'Polo',
-                'Sweatshirt / Hudi',
-                'Sviter / Cemper',
-                'Gödəkçə / Palto',
-                'Pencək / Blazer',
-                'Şalvar / Cins',
-                'Şort',
-                'Ayaqqabı',
-                'Aksesuar',
-                'İdman Geyimi',
-                'Kostyum',
-                'Başqa'
+                'T-shirt',
+    'Classic Shirt',
+    'Polo',
+    'Sweatshirt / Hoodie',
+    'Sweater / Jumper',
+    'Jacket / Coat',
+    'Blazer / Suit Jacket',
+    'Trousers / Jeans',
+    'Shorts',
+    'Shoes',
+    'Accessory',
+    'Sportswear',
+    'Suit',
+    'Other'
             ]
         },
         colors: {
@@ -46,7 +46,7 @@ const clothesSchema = new mongoose.Schema(
         season: {
             type: String,
             required: false,
-            enum: ['Yay', 'Qış', 'Payız', 'Yaz', 'Mövsümsüz']
+            enum: ['Summer', 'Winter', 'Autumn', 'Spring', 'All-season']
         },
         brand: {
             type: String,
