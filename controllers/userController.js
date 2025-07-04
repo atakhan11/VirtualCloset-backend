@@ -6,7 +6,7 @@ import sendEmail from '../utils/sendEmail.js';
 import bcrypt from 'bcryptjs';
 import Activity from "../models/activityModel.js";
 
-// 1. YENİ İSTİFADƏÇİNİN QEYDİYYATI
+
 const registerUser = async (req, res) => {
     try {
         const { name, email, password } = req.body;
@@ -35,7 +35,7 @@ const registerUser = async (req, res) => {
                     name: user.name,
                     email: user.email,
                     role: user.role,
-                    avatar: user.avatar // DÜZƏLİŞ: Avatar sahəsi cavaba əlavə edildi
+                    avatar: user.avatar 
                 },
             });
         } else {
@@ -47,14 +47,12 @@ const registerUser = async (req, res) => {
     }
 };
 
-// 2. İSTİFADƏÇİNİN GİRİŞİ (YENİLƏNMİŞ)
+
 const loginUser = async (req, res) => {
     try {
         const { email, password } = req.body;
         const user = await UserModel.findOne({ email }).select('+password');;
 
-        // DİQQƏT: Sizin kodunuzda 'passwordControl' yazılıb. Mən standart 'matchPassword' istifadə edirəm.
-        // Zəhmət olmasa, bunu öz funksiya adınızla əvəz edin.
         if (user && (await user.passwordControl(password))) { 
             const token = generateToken(user._id);
             res.status(200).json({
@@ -64,7 +62,7 @@ const loginUser = async (req, res) => {
                     name: user.name,
                     email: user.email,
                     role: user.role,
-                    avatar: user.avatar // DÜZƏLİŞ: Avatar sahəsi cavaba əlavə edildi
+                    avatar: user.avatar 
                 }
             });
         } else {
@@ -76,7 +74,7 @@ const loginUser = async (req, res) => {
     }
 };
 
-// 3. İSTİFADƏÇİNİN ÇIXIŞI
+
 const logoutUser = (req, res) => {
     res.cookie("jwt", "", {
         httpOnly: true,
@@ -85,14 +83,10 @@ const logoutUser = (req, res) => {
     res.status(200).json({ message: 'Uğurla çıxış edildi' });
 };
 
-// =======================================================
-// YENİ və DÜZƏLDİLMİŞ FUNKSİYALAR
-// =======================================================
 
-// 4. DAXİL OLMUŞ İSTİFADƏÇİNİN MƏLUMATLARINI Gətirmək
 const getUserProfile = async (req, res) => {
     try {
-        // req.user "protect" middleware-dən gəlir
+        
         const user = await UserModel.findById(req.user._id).select('-password');
 
         if (user) {
@@ -112,7 +106,7 @@ const getUserProfile = async (req, res) => {
 };
 
 
-// 5. DAXİL OLMUŞ İSTİFADƏÇİNİN PROFİLİNİ YENİLƏMƏK
+
 const updateUserProfile = async (req, res) => {
     try {
         const user = await UserModel.findById(req.user._id);
@@ -126,8 +120,6 @@ const updateUserProfile = async (req, res) => {
         }
 
             if (req.body.password) {
-                // Yeni şifrəni databazaya yazmazdan əvvəl Mongoose-un pre('save') metodu
-                // onu avtomatik hash-ləməlidir (userModel.js-də təyin olunubsa).
                 user.password = req.body.password;
             }
 
@@ -139,7 +131,7 @@ const updateUserProfile = async (req, res) => {
                 email: updatedUser.email,
                 role: updatedUser.role,
                 avatar: updatedUser.avatar,
-                token: generateToken(updatedUser._id), // Yeni məlumatlarla yeni token
+                token: generateToken(updatedUser._id), 
             });
         } else {
             res.status(404).json({ message: 'İstifadəçi tapılmadı' });
@@ -154,10 +146,7 @@ const updateUserProfile = async (req, res) => {
 };
 
 
-// ... Qalan funksiyalar (forgotPassword, resetPassword, Admin funksiyaları) olduğu kimi qalır ...
 
-// YENİ VƏ ETİBARLI FORGOTPASSWORD FUNKSİYASI
-// userController.js-də bu versiyanı istifadə edin
 const forgotPassword = async (req, res) => {
     try {
         const user = await UserModel.findOne({ email: req.body.email });
@@ -168,11 +157,9 @@ const forgotPassword = async (req, res) => {
         const resetToken = crypto.randomBytes(32).toString('hex');
         const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
         
-        // Dəyərləri birbaşa user obyektinə mənimsədirik
         user.resetPasswordToken = hashedToken;
         user.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
 
-        // Dəyişdirilmiş user obyektini yadda saxlayırıq
         const updatedUser = await user.save();
         
       
@@ -198,7 +185,7 @@ const forgotPassword = async (req, res) => {
         res.status(500).json({ message: 'Server xətası' });
     }
 };
-// userController.js-də bu funksiyanı aşağıdakı ilə əvəz edin
+
 const resetPassword = async (req, res) => {
     try {
         const hashedToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
@@ -211,11 +198,9 @@ const resetPassword = async (req, res) => {
             return res.status(400).json({ message: 'Şifrə sıfırlama linki yanlışdır və ya vaxtı keçib.' });
         }
 
-        // YENİ ŞİFRƏNİ BİRBAŞA BURADA HASH-LƏYİRİK
         const salt = await bcrypt.genSalt(10);
         user.password = await bcrypt.hash(req.body.password, salt);
         
-        // Artıq lazım olmayan token məlumatlarını təmizləyirik
         user.resetPasswordToken = undefined;
         user.resetPasswordExpires = undefined;
         
@@ -232,16 +217,13 @@ const resetPassword = async (req, res) => {
 const getAllUsers = async (req, res) => {
     try {
         
-        const users = await UserModel.find({}).select('-password'); // Şifrəni göstərmirik
+        const users = await UserModel.find({}).select('-password'); 
         res.json(users);
     } catch (error) {
         res.status(500).json({ message: 'Server xətası' });
     }
 };
 
-// @desc    İstifadəçini ID-yə görə sil (Admin)
-// @route   DELETE /api/users/:id
-// @access  Private/Admin
 const deleteUser = async (req, res) => {
     try {
         
@@ -264,18 +246,18 @@ const updateUser = async (req, res) => {
         const user = await UserModel.findById(req.params.id);
 
         if (user) {
-            // Adminin yeniləyə biləcəyi sahələri təyin edirik
+           
             user.name = req.body.name || user.name;
             user.email = req.body.email || user.email;
             
-            // 'isAdmin' statusunu yalnız təyin edildikdə dəyişirik
+           
             if (req.body.isAdmin !== undefined) {
                 user.isAdmin = req.body.isAdmin;
             }
 
             const updatedUser = await user.save();
 
-            // Cavab olaraq şifrəni qaytarmırıq
+          
             res.json({
                 _id: updatedUser._id,
                 name: updatedUser.name,
@@ -293,10 +275,8 @@ const updateUser = async (req, res) => {
 
 const getChatUsers = async (req, res) => {
     try {
-        // Hazırkı istifadəçi xaric, bütün istifadəçiləri tapırıq
-        // və indi 'avatar' sahəsini də sorğuya əlavə edirik
         const users = await UserModel.find({ _id: { $ne: req.user._id } })
-                                     .select('_id name email avatar'); // <--- ƏSAS DƏYİŞİKLİK BURADADIR
+                                     .select('_id name email avatar'); 
 
         res.json(users);
     } catch (error) {
@@ -311,11 +291,6 @@ const deleteUserProfile = async (req, res) => {
         const user = await UserModel.findById(req.user._id);
 
         if (user) {
-            // Bu hissə istəyə bağlıdır: İstifadəçi silinəndə onun bütün məlumatları da silinsinmi?
-            // await Clothes.deleteMany({ user: req.user._id });
-            // await Outfit.deleteMany({ user: req.user._id });
-            // await WishlistItem.deleteMany({ user: req.user._id });
-
             await user.deleteOne();
             res.json({ message: 'Hesab uğurla silindi' });
         } else {
@@ -328,13 +303,13 @@ const deleteUserProfile = async (req, res) => {
 };
 
 
-// Bütün funksiyaları ES Module formatında export edirik
+
 export {
     registerUser,
     loginUser,
     logoutUser,
     getUserProfile,
-    updateUserProfile, // Yeni funksiya
+    updateUserProfile, 
     forgotPassword,
     resetPassword,
     getAllUsers,

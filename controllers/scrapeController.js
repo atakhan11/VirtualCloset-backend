@@ -1,9 +1,6 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 
-// @desc    Bir URL-dən məhsul məlumatlarını çıxarır
-// @route   POST /api/scrape/fetch-url
-// @access  Private
 const fetchProductData = async (req, res) => {
     const { productUrl } = req.body;
 
@@ -25,18 +22,17 @@ const fetchProductData = async (req, res) => {
         
         let price = $('meta[property="product:price:amount"]').attr('content');
         if (!price) {
-            price = $('.product_main .price_color').text().trim().replace('£', ''); // Kitab saytı üçün daha spesifik axtarış
+            price = $('.product_main .price_color').text().trim().replace('£', ''); 
         }
         
-        // === ƏSAS DƏYİŞİKLİK BURADADIR ===
-        // Əgər şəklin yolu tam deyilsə, onu `productUrl`-ə əsaslanaraq tam URL-ə çeviririk.
+  
         let finalImage = image;
         if (image && !image.startsWith('http')) {
             try {
-                // Bu, ../../ kimi yolları düzgün şəkildə həll edəcək
+                
                 finalImage = new URL(image, productUrl).href;
             } catch (e) {
-                // Əgər xəta baş verərsə, köhnə üsulu yoxlayaq
+                
                 const url = new URL(productUrl);
                 finalImage = `${url.protocol}//${url.hostname}${image}`;
             }

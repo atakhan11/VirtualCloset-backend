@@ -13,7 +13,7 @@ router.route('/:id/plan').put(protect, updateOutfitPlan);
  router.route('/:id/unplan').put(protect, unplanOutfit);
 
 router.route('/:id')
-    .get(protect, getOutfitById) // <-- YENİ ROUTE
+    .get(protect, getOutfitById) 
     .delete(protect, deleteOutfit);
     
 export default router;

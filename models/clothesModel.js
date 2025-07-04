@@ -18,7 +18,6 @@ const clothesSchema = new mongoose.Schema(
             type: String,
             required: true
         },
-        // --- DƏYİŞİKLİK BURADADIR ---
         category: {
             type: String,
             required: true,

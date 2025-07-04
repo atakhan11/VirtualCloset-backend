@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
-import crypto from 'crypto'; // <--- YENİ ƏLAVƏ EDİLDİ
+
 
 const userSchema = mongoose.Schema(
     {
@@ -47,13 +47,6 @@ userSchema.methods.passwordControl = async function (password) {
     return await bcrypt.compare(password, this.password);
 }
 
-// =======================================================
-// YENİ ƏLAVƏ EDİLƏN METOD
-// =======================================================
-
-// =======================================================
-// YENİ METODUN SONU
-// =======================================================
 
 
 const UserModel = mongoose.model('user', userSchema);

@@ -1,9 +1,7 @@
 import WishlistItem from '../models/wishlistItemModel.js';
 import ClothesModel from '../models/clothesModel.js';
 
-// @desc    Yeni bir arzu məhsulu əlavə et
-// @route   POST /api/wishlist
-// @access  Private
+
 const addWishlistItem = async (req, res) => {
     try {
         const { name, category, price, storeUrl, notes, image } = req.body;
@@ -21,9 +19,7 @@ const addWishlistItem = async (req, res) => {
     }
 };
 
-// @desc    Arzu siyahısındakı bir məhsulu yenilə
-// @route   PUT /api/wishlist/:id
-// @access  Private
+
 const updateWishlistItem = async (req, res) => {
     try {
         const item = await WishlistItem.findById(req.params.id);
@@ -49,9 +45,7 @@ const updateWishlistItem = async (req, res) => {
     }
 };
 
-// @desc    Arzu siyahısındakı bir məhsulu qarderoba köçür
-// @route   POST /api/wishlist/:id/move
-// @access  Private
+
 const moveItemToWardrobe = async (req, res) => {
     try {
         const item = await WishlistItem.findById(req.params.id);
@@ -96,9 +90,7 @@ const moveItemToWardrobe = async (req, res) => {
     }
 };
 
-// @desc    Daxil olmuş istifadəçinin arzu siyahısını gətir
-// @route   GET /api/wishlist
-// @access  Private
+
 const getMyWishlist = async (req, res) => {
     try {
         const wishlist = await WishlistItem.find({ user: req.user._id }).sort({ createdAt: -1 });
@@ -109,9 +101,6 @@ const getMyWishlist = async (req, res) => {
     }
 };
 
-// @desc    Arzu siyahısından bir məhsulu sil
-// @route   DELETE /api/wishlist/:id
-// @access  Private
 const deleteWishlistItem = async (req, res) => {
     try {
         const item = await WishlistItem.findById(req.params.id);

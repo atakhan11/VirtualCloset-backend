@@ -1,8 +1,5 @@
 import Outfit from '../models/outfitModel.js';
 
-// @desc    Yeni bir kombin yarat
-// @route   POST /api/outfits
-// @access  Private
 const createOutfit = async (req, res) => {
     const { name, items } = req.body;
 
@@ -14,7 +11,7 @@ const createOutfit = async (req, res) => {
         const outfit = new Outfit({
             name,
             items,
-            user: req.user._id, // Bu məlumat "protect" middleware-dən gəlir
+            user: req.user._id, 
         });
 
         const createdOutfit = await outfit.save();
@@ -25,13 +22,11 @@ const createOutfit = async (req, res) => {
     }
 };
 
-// @desc    Daxil olmuş istifadəçinin bütün kombinlərini gətir
-// @route   GET /api/outfits
-// @access  Private
+
 const getMyOutfits = async (req, res) => {
     try {
         const outfits = await Outfit.find({ user: req.user._id })
-            .populate('items') // Bu, geyim ID-ləri yerinə, geyimlərin öz məlumatlarını gətirəcək
+            .populate('items') 
             .sort({ createdAt: -1 });
         res.json(outfits);
     } catch (error) {
@@ -40,15 +35,13 @@ const getMyOutfits = async (req, res) => {
     }
 };
 
-// @desc    Bir kombini ID-yə görə sil
-// @route   DELETE /api/outfits/:id
-// @access  Private
+
 const deleteOutfit = async (req, res) => {
     try {
         const outfit = await Outfit.findById(req.params.id);
 
         if (outfit) {
-            // Təhlükəsizlik: Yalnız kombinin sahibi onu silə bilər
+            
             if (outfit.user.toString() !== req.user._id.toString()) {
                 return res.status(401).json({ message: 'Bu əməliyyatı etməyə icazəniz yoxdur' });
             }
@@ -67,11 +60,10 @@ const deleteOutfit = async (req, res) => {
 const getOutfitById = async (req, res) => {
     try {
         const outfit = await Outfit.findById(req.params.id)
-            .populate('user', 'name email') // Sahibinin adını və emailini gətirir
-            .populate('items');             // Kombindəki geyimlərin tam məlumatını gətirir
+            .populate('user', 'name email') 
+            .populate('items');             
 
         if (outfit) {
-            // Təhlükəsizlik Yoxlaması: Yalnız kombinin sahibi ona baxa bilər
             if (outfit.user._id.toString() !== req.user._id.toString()) {
                 return res.status(401).json({ message: 'Bu kombini görməyə icazəniz yoxdur' });
             }
@@ -87,16 +79,14 @@ const getOutfitById = async (req, res) => {
 
 const updateOutfitPlan = async (req, res) => {
     try {
-        const { date } = req.body; // Frontend-dən gələcək tarix məlumatı
+        const { date } = req.body; 
         const outfit = await Outfit.findById(req.params.id);
 
         if (outfit) {
-            // İcazə yoxlaması
             if (outfit.user.toString() !== req.user._id.toString()) {
                 return res.status(401).json({ message: 'Bu əməliyyatı etməyə icazəniz yoxdur' });
             }
 
-            // Məlumatları yeniləyirik
             outfit.isPlanned = true;
             outfit.plannedDate = date;
 
@@ -116,14 +106,13 @@ const updateOutfitPlan = async (req, res) => {
             const outfit = await Outfit.findById(req.params.id);
     
             if (outfit) {
-                // İcazə yoxlaması
+ 
                 if (outfit.user.toString() !== req.user._id.toString()) {
                     return res.status(401).json({ message: 'Bu əməliyyatı etməyə icazəniz yoxdur' });
                 }
     
-                // Planı ləğv edirik
                 outfit.isPlanned = false;
-                outfit.plannedDate = undefined; // Tarixi təmizləyirik
+                outfit.plannedDate = undefined; 
     
                 const updatedOutfit = await outfit.save();
                 res.json(updatedOutfit);

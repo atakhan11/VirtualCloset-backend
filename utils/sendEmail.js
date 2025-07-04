@@ -1,4 +1,3 @@
-// utils/sendEmail.js
 import nodemailer from 'nodemailer';
 
 const sendEmail = async (options) => {
@@ -14,7 +13,7 @@ const sendEmail = async (options) => {
         from: `StyleFolio <${process.env.EMAIL_USER}>`,
         to: options.email,
         subject: options.subject,
-        html: options.message // Dəyişiklik burada
+        html: options.message 
     };
 
     await transporter.sendMail(mailOptions);

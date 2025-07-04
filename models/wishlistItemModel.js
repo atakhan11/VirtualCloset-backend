@@ -10,11 +10,11 @@ const wishlistItemSchema = new mongoose.Schema(
         user: {
             type: mongoose.Schema.Types.ObjectId,
             required: true,
-            ref: 'user', // Bu məhsulun hansı istifadəçiyə aid olduğunu göstərir
+            ref: 'user', 
         },
         image: {
             type: String,
-            required: true, // Şəkil məcburi deyil
+            required: true, 
         },
         category: {
             type: String,
@@ -25,19 +25,19 @@ const wishlistItemSchema = new mongoose.Schema(
             required: false,
         },
         storeUrl: {
-            type: String, // Məhsulun satıldığı mağazanın linki
+            type: String, 
             trim: true,
         },
         notes: {
             type: String,
         },
-        isPurchased: { // Məhsulun alınıb-alınmadığını göstərir
+        isPurchased: {
             type: Boolean,
             default: false,
         },
     },
     {
-        timestamps: true, // `createdAt` və `updatedAt` sahələrini avtomatik əlavə edir
+        timestamps: true, 
     }
 );
 

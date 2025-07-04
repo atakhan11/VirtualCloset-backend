@@ -10,26 +10,26 @@ const outfitSchema = new mongoose.Schema(
         user: {
             type: mongoose.Schema.Types.ObjectId,
             required: true,
-            ref: 'user', // Bu kombinin hansı istifadəçiyə aid olduğunu göstərir
+            ref: 'user', 
         },
         items: [
             {
                 type: mongoose.Schema.Types.ObjectId,
                 required: true,
-                ref: 'Cloth', // Kombinə daxil olan geyimlərin ID-ləri
+                ref: 'Cloth', 
             },
         ],
         isPlanned: {
             type: Boolean,
-            default: false, // Standard olaraq heç bir kombin planlanmayıb
+            default: false, 
         },
         plannedDate: {
-            type: Date, // Planlandığı tarix
+            type: Date, 
         },
     },
     
     {
-        timestamps: true, // `createdAt` və `updatedAt` sahələrini avtomatik əlavə edir
+        timestamps: true, 
     }
 );
 

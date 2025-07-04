@@ -1,19 +1,13 @@
-// controllers/clothesController.js
-
 import Activity from '../models/activityModel.js';
 import ClothesModel from '../models/clothesModel.js';
-import users from '../models/userModel.js'; // <-- ƏSAS PROBLEM BU SƏTRİN OLMAMASIDIR
+import users from '../models/userModel.js'; 
 import fs from 'fs';
 import path from 'path';
 
-// @desc    Yeni bir geyim əlavə et
-// @route   POST /api/clothes
-// @access  Private
 const addCloth = async (req, res) => {
-    // Dəyişiklik: 'image' sahəsini req.body-dən birbaşa URL olaraq alırıq
+
     const { name, category, colors, season, brand, notes, image } = req.body;
 
-    // Dəyişiklik: Artıq req.file yox, req.body.image-in mövcudluğunu yoxlayırıq
     if (!image) {
         return res.status(400).json({ message: 'Şəkil URL-i tapılmadı. Zəhmət olmasa, şəkil yükləyin.' });
     }
@@ -26,11 +20,10 @@ const addCloth = async (req, res) => {
             user: req.user._id,
             name,
             category,
-            colors: colors ? colors.split(',') : [], // Rəngləri string-dən array-ə çevirir
+            colors: colors ? colors.split(',') : [], 
             season,
             brand,
             notes,
-            // Dəyişiklik: Şəkil sahəsinə birbaşa Cloudinary-dən gələn URL yazılır
             image: image 
         });
 
@@ -47,9 +40,6 @@ const addCloth = async (req, res) => {
     }
 };
 
-// @desc    Daxil olmuş istifadəçinin bütün geyimlərini gətir
-// @route   GET /api/clothes
-// @access  Private
 const getMyClothes = async (req, res) => {
     try {
         const clothes = await ClothesModel.find({ user: req.user._id }).sort({ createdAt: -1 });
@@ -60,9 +50,7 @@ const getMyClothes = async (req, res) => {
     }
 };
 
-// @desc    Bir geyimi ID-yə görə sil
-// @route   DELETE /api/clothes/:id
-// @access  Private
+
 const deleteCloth = async (req, res) => {
     try {
         const cloth = await ClothesModel.findById(req.params.id);
@@ -88,9 +76,7 @@ const deleteCloth = async (req, res) => {
     }
 };
 
-// @desc    Bir geyimi ID-yə görə redaktə et
-// @route   PUT /api/clothes/:id
-// @access  Private
+
 const updateCloth = async (req, res) => {
     try {
         const { name, category, colors, season, brand, notes, image } = req.body;
@@ -98,7 +84,6 @@ const updateCloth = async (req, res) => {
         const cloth = await ClothesModel.findById(req.params.id);
 
         if (cloth) {
-            // İcazə yoxlaması: Yalnız paltarın sahibi və ya admin redaktə edə bilər.
             if (cloth.user.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
                 res.status(401);
                 throw new Error('Bu əməliyyatı etməyə səlahiyyətiniz yoxdur');
@@ -111,8 +96,6 @@ const updateCloth = async (req, res) => {
             cloth.notes = notes || cloth.notes;
             cloth.colors = colors ? colors.split(',') : cloth.colors;
             
-            // Dəyişiklik: Əgər frontend-dən yeni şəkil URL-i gəlibsə, onu yeniləyirik.
-            // Əks halda köhnə URL qalır.
             cloth.image = image || cloth.image;
 
             const updatedCloth = await cloth.save();
@@ -123,24 +106,19 @@ const updateCloth = async (req, res) => {
         }
     } catch (error) {
         console.error("UPDATE CLOTH ERROR:", error);
-        // Xəta mesajını daha detallı göndəririk
         res.status(500).json({ message: error.message || 'Server xətası baş verdi' });
     }
 };
 
-// @desc    Bütün geyimləri gətir (Admin üçün)
-// @route   GET /api/clothes/all
-// @access  Private/Admin
+
 const getAllClothes_Admin = async (req, res) => {
     try {
          const { search } = req.query;
 
-        // YENİ: Axtarış üçün filter obyekti yaradırıq
         const filter = search
             ? {
-                // $or ilə həm adda, həm də kateqoriyada axtarırıq
                 $or: [
-                    { name: { $regex: search, $options: 'i' } }, // 'i' - case-insensitive
+                    { name: { $regex: search, $options: 'i' } }, 
                     { category: { $regex: search, $options: 'i' } }
                 ]
             }
@@ -155,7 +133,6 @@ const getAllClothes_Admin = async (req, res) => {
     }
 };
 
-// Bütün funksiyaları export edirik
 export { 
     addCloth, 
     getMyClothes, 

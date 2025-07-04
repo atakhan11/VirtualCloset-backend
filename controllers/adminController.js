@@ -1,33 +1,29 @@
-// controllers/adminController.js
 import UserModel from '../models/userModel.js';
 import ClothesModel from '../models/clothesModel.js';
 import Activity from '../models/activityModel.js';
-// Gələcəkdə ClothesModel və s. də import edəcəksiniz
+import AnnouncementModel from '../models/announcementModel.js';
 
-// Bütün istifadəçilərin siyahısını gətirən funksiya
 const getAllUsers = async (req, res) => {
     try {
         const { search } = req.query;
 
-        // YENİ: Axtarış üçün filter obyekti yaradırıq
         const filter = search 
             ? {
-                // $or ilə həm adda, həm də email-də axtarırıq
                 $or: [
-                    { name: { $regex: search, $options: 'i' } }, // 'i' - case-insensitive
+                    { name: { $regex: search, $options: 'i' } }, 
                     { email: { $regex: search, $options: 'i' } }
                 ]
             } 
-            : {}; // Əgər axtarış sözü yoxdursa, filter boş olur (bütün istifadəçilər gəlir)
+            : {}; 
 
-        const users = await UserModel.find(filter).select('-password'); // Şifrə xaric, bütün istifadəçilər
+        const users = await UserModel.find(filter).select('-password'); 
         res.status(200).json(users);
     } catch (error) {
         res.status(500).json({ message: 'Server xətası' });
     }
 };
 
-// Bir istifadəçini silən funksiya
+
 const deleteUser = async (req, res) => {
     try {
         const user = await UserModel.findById(req.params.id);
@@ -46,25 +42,25 @@ const deleteUser = async (req, res) => {
 const getDashboardStats = async (req, res) => {
     try {
         const userCount = await UserModel.countDocuments();
-        const clothesCount = await ClothesModel.countDocuments(); // Bu işləmək üçün ClothesModel olmalıdır
+        const clothesCount = await ClothesModel.countDocuments(); 
         
         const categoryDistribution = await ClothesModel.aggregate([
             {
                 $group: {
-                    _id: '$category', // Kateqoriyaya görə qruplaşdır
-                    count: { $sum: 1 } // Hər qrupdakı sənəd sayını cəmlə
+                    _id: '$category', 
+                    count: { $sum: 1 } 
                 }
             },
             {
                 $project: {
-                    _id: 0, // _id sahəsini göstərmə
-                    name: '$_id', // _id-ni 'name' olaraq adlandır (recharts üçün)
-                    value: '$count' // count-u 'value' olaraq adlandır (recharts üçün)
+                    _id: 0, 
+                    name: '$_id', 
+                    value: '$count' 
                 }
             }
         ]);
 
-        // Son 7 gündəki qeydiyyatları hesablamaq üçün (bu bir az mürəkkəbdir)
+
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
@@ -94,7 +90,6 @@ const getDashboardStats = async (req, res) => {
 const getRecentActivities = async (req, res) => {
   try {
     const activities = await Activity.find()
-      // YENİ ƏLAVƏ: Yalnız "user" sahəsi boş (null) olmayan sənədləri gətirir.
       .where('user').ne(null) 
       .sort({ createdAt: -1 })
       .limit(10)
@@ -102,10 +97,47 @@ const getRecentActivities = async (req, res) => {
 
     res.json(activities);
   } catch (error) {
-    // Xətanı server terminalında daha detallı görmək üçün
     console.error("Aktivlikləri gətirərkən xəta baş verdi:", error); 
     res.status(500).json({ message: 'Server xətası' });
   }
 };
 
-export { getAllUsers, deleteUser, getDashboardStats, getRecentActivities };
+const createAnnouncement = async (req, res) => {
+    try {
+        const { title, content } = req.body;
+        if (!title || !content) {
+            return res.status(400).json({ message: 'Başlıq və məzmun boş ola bilməz.' });
+        }
+
+        await AnnouncementModel.updateMany({}, { isActive: false });
+
+        const newAnnouncement = new AnnouncementModel({ title, content, isActive: true });
+        await newAnnouncement.save();
+        
+        res.status(201).json({ message: 'Elan uğurla paylaşıldı!' });
+    } catch (error) {
+        res.status(500).json({ message: 'Server xətası' });
+    }
+};
+
+
+const getAllAnnouncements = async (req, res) => {
+    try {
+        const announcements = await AnnouncementModel.find().sort({ createdAt: -1 });
+        res.json(announcements);
+    } catch (error) {
+        res.status(500).json({ message: 'Server xətası' });
+    }
+};
+
+
+const deleteAnnouncement = async (req, res) => {
+    try {
+        await AnnouncementModel.findByIdAndDelete(req.params.id);
+        res.json({ message: 'Elan silindi.' });
+    } catch (error) {
+        res.status(500).json({ message: 'Server xətası' });
+    }
+};
+
+export { getAllUsers, deleteUser, getDashboardStats, getRecentActivities, createAnnouncement, getAllAnnouncements, deleteAnnouncement };

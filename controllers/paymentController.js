@@ -1,21 +1,13 @@
     import Stripe from 'stripe';
-
-    // .env faylından gizli açarı götürürük
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
     
-    // @desc    Yeni bir ödəniş niyyəti (Payment Intent) yarat
-    // @route   POST /api/payments/create-payment-intent
-    // @access  Private
     const createPaymentIntent = async (req, res) => {
-        const { amount } = req.body; // Frontend-dən gələn məbləğ (AZN ilə)
-    
-        // Məbləği Stripe-ın başa düşdüyü formata (qəpik) çeviririk
+        const { amount } = req.body; 
         const amountInCents = Math.round(amount * 100);
-    
         try {
             const paymentIntent = await stripe.paymentIntents.create({
                 amount: amountInCents,
-                currency: 'azn', // Valyuta
+                currency: 'azn', 
                 automatic_payment_methods: {
                     enabled: true,
                 },

@@ -4,21 +4,18 @@ const getStyleAdvice = async (req, res) => {
     const { question, clothes } = req.body;
 
     if (!question) {
-        return res.status(400).json({ message: 'Question not provided.' }); // Moved to English
+        return res.status(400).json({ message: 'Question not provided.' }); 
     }
 
     try {
         const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY);
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash"});
-
-        // Checking if wardrobe list exists
         const hasWardrobe = Array.isArray(clothes) && clothes.length > 0;
 
         const wardrobeContext = hasWardrobe 
-            ? clothes.map(c => `- Name: "${c.name}", Category: "${c.category}", Season: "${c.season || 'not specified'}"`).join('\n') // Moved to English
-            : "Empty"; // Moved to English
-        
-        // === UPDATED, TWO-SCENARIO INSTRUCTION (PROMPT) ===
+            ? clothes.map(c => `- Name: "${c.name}", Category: "${c.category}", Season: "${c.season || 'not specified'}"`).join('\n') 
+            : "Empty"; 
+
         const prompt = `
             You are a professional and creative style advisor for a virtual wardrobe application called "StyleFolio".
             All your responses MUST be in English.
@@ -60,7 +57,7 @@ const getStyleAdvice = async (req, res) => {
 
     } catch (error) {
         console.error('AI STYLE ADVICE ERROR:', error);
-        res.status(500).json({ message: 'Could not connect to the smart advisor.' }); // Moved to English
+        res.status(500).json({ message: 'Could not connect to the smart advisor.' }); 
     }
 };
 

@@ -7,22 +7,12 @@ import { protect } from '../middleware/authMiddleware.js';
 import admin from '../middleware/adminMiddleware.js';
 
 const router = express.Router();
-
-// --- Multer ilə bağlı bütün konfiqurasiya buradan tamamilə silindi ---
-
-// --- Route Təyinləri ---
-
 router.route('/all').get(protect, admin, getAllClothes_Admin);
 
-// /api/clothes/
 router.route('/')
     .get(protect, getMyClothes)
-    // Dəyişiklik: upload.single('image') middleware-i buradan silindi
     .post(protect, addCloth); 
-
-// /api/clothes/:id
 router.route('/:id')
-    // Dəyişiklik: upload.single('image') middleware-i buradan silindi
     .put(protect, updateCloth) 
     .delete(protect, deleteCloth);
     
